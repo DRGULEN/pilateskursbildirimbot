@@ -3,21 +3,21 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import sys
-import asyncio
 from telegram import Bot
 from dotenv import load_dotenv
+import time
+import asyncio
 
 # --- Ortam değişkenlerini yükle ---
 load_dotenv()
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Son bilinen kurs başlangıç tarihi (referans)
 REFERANS_TARIH = datetime.strptime("08.09.2025", "%d.%m.%Y")
 
 URL = "https://www.tcf.gov.tr/branslar/pilates/#kurs"
-
 
 def kurslari_getir():
     """Web sayfasındaki kurs bilgilerini parse eder ve olası hataları yönetir."""
@@ -29,6 +29,8 @@ def kurslari_getir():
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
         resp.raise_for_status()
+        # --- DEBUG: Sayfanın ilk 1000 karakterini loga yaz ---
+        print("DEBUG HTML:", resp.text[:1000])
     except requests.exceptions.RequestException as e:
         print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
         return []
@@ -62,16 +64,14 @@ def kurslari_getir():
             })
     return kurslar
 
-
 async def telegram_mesaj_gonder(mesaj):
-    """Belirtilen mesajı Telegram'a gönderir (async)."""
+    """Belirtilen mesajı Telegram'a gönderir."""
     try:
-        bot = Bot(token=BOT_TOKEN)
-        await bot.send_message(chat_id=CHAT_ID, text=mesaj)
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mesaj)
         print("Telegram'a bildirim gönderildi.")
     except Exception as e:
         print(f"Telegram'a mesaj gönderilirken hata oluştu: {e}", file=sys.stderr)
-
 
 async def yeni_kurslari_kontrol_et():
     """Yeni kurs olup olmadığını kontrol eder ve sonuçları Telegram'a bildirir."""
@@ -96,9 +96,14 @@ async def yeni_kurslari_kontrol_et():
         print(mesaj)
         await telegram_mesaj_gonder(mesaj)
 
-
 # -------------------------
-# Tek seferlik test için
+# Loop ile sürekli çalıştırma
 # -------------------------
 if __name__ == "__main__":
-    asyncio.run(yeni_kurslari_kontrol_et())
+    while True:
+        try:
+            asyncio.run(yeni_kurslari_kontrol_et())
+        except Exception as e:
+            print(f"Hata oluştu: {e}", file=sys.stderr)
+        # 30 dakika bekle (1800 saniye)
+        time.sleep(1800)
