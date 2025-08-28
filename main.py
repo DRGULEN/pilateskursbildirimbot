@@ -5,6 +5,7 @@ from datetime import datetime
 import sys
 import telegram
 from dotenv import load_dotenv
+import time
 
 # --- Ortam değişkenlerini yükle ---
 load_dotenv()
@@ -15,7 +16,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 # Son bilinen kurs başlangıç tarihi (referans)
 REFERANS_TARIH = datetime.strptime("08.09.2025", "%d.%m.%Y")
 
-URL = "https://www.tcf.gov.tr/branslar/pilates/#kurs"
+URL = "https://www.tcf.gov.tr/branslar/pilates/"
 
 def kurslari_getir():
 """Web sayfasındaki kurs bilgilerini parse eder ve olası hataları yönetir."""
@@ -87,5 +88,14 @@ else:
 	print(mesaj)
 	telegram_mesaj_gonder(mesaj)
 
+# -------------------------
+# Loop ile sürekli çalıştırma
+# -------------------------
 if __name__ == "__main__":
-yeni_kurslari_kontrol_et()
+while True:
+	try:
+		yeni_kurslari_kontrol_et()
+	except Exception as e:
+		print(f"Hata oluştu: {e}", file=sys.stderr)
+	# 30 dakika bekle (1800 saniye)
+	time.sleep(1800)
