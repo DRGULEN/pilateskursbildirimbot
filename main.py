@@ -26,4 +26,4 @@ def kurslari_getir():
                       "Chrome/116.0.0.0 Safari/537.36"
     }
     try:
-        resp = requests.get(URL, headers=headers, timeo
+        resp = requests.get(URL, headers=headers, timeot=10)
