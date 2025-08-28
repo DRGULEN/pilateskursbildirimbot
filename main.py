@@ -27,3 +27,7 @@ def kurslari_getir():
     }
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
+        return []
