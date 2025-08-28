@@ -19,6 +19,7 @@ REFERANS_TARIH = datetime.strptime("08.09.2025", "%d.%m.%Y")
 
 URL = "https://www.tcf.gov.tr/branslar/pilates/#kurs"
 
+
 def kurslari_getir():
     """Web sayfasındaki kurs bilgilerini parse eder ve olası hataları yönetir."""
     headers = {
@@ -29,6 +30,8 @@ def kurslari_getir():
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
         resp.raise_for_status()
+        # --- DEBUG: Sayfanın ilk 500 karakterini logla ---
+        print("DEBUG HTML:", resp.text[:500])
     except requests.exceptions.RequestException as e:
         print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
         return []
@@ -48,12 +51,10 @@ def kurslari_getir():
             baslik = cols[0].get_text(strip=True)
             yer = cols[1].get_text(strip=True)
             tarih = cols[2].get_text(strip=True)
-
             try:
                 bas_tarih = datetime.strptime(tarih.split(" - ")[0], "%d.%m.%Y")
             except (ValueError, IndexError):
                 continue
-
             kurslar.append({
                 "baslik": baslik,
                 "yer": yer,
@@ -62,14 +63,16 @@ def kurslari_getir():
             })
     return kurslar
 
+
 async def telegram_mesaj_gonder(mesaj):
-    """Belirtilen mesajı Telegram'a gönderir."""
+    """Belirtilen mesajı Telegram'a gönderir (async)."""
     try:
         bot = Bot(token=BOT_TOKEN)
         await bot.send_message(chat_id=CHAT_ID, text=mesaj)
-        print("Telegram'a bildirim gönderildi.")
+        print("Telegram'a mesaj gönderildi.")
     except Exception as e:
         print(f"Telegram'a mesaj gönderilirken hata oluştu: {e}", file=sys.stderr)
+
 
 async def yeni_kurslari_kontrol_et():
     """Yeni kurs olup olmadığını kontrol eder ve yalnızca yeni kurs varsa Telegram'a bildirir."""
