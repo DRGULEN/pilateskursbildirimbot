@@ -3,16 +3,16 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import sys
+import asyncio
 from telegram import Bot
 from dotenv import load_dotenv
 import time
-import asyncio
 
 # --- Ortam değişkenlerini yükle ---
 load_dotenv()
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Son bilinen kurs başlangıç tarihi (referans)
 REFERANS_TARIH = datetime.strptime("08.09.2025", "%d.%m.%Y")
@@ -29,7 +29,6 @@ def kurslari_getir():
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
         resp.raise_for_status()
-        print("DEBUG: Web sayfası başarıyla çekildi.")
     except requests.exceptions.RequestException as e:
         print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
         return []
@@ -66,24 +65,18 @@ def kurslari_getir():
 async def telegram_mesaj_gonder(mesaj):
     """Belirtilen mesajı Telegram'a gönderir."""
     try:
-        bot = Bot(token=TELEGRAM_BOT_TOKEN)
-        await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mesaj)
+        bot = Bot(token=BOT_TOKEN)
+        await bot.send_message(chat_id=CHAT_ID, text=mesaj)
         print("Telegram'a bildirim gönderildi.")
     except Exception as e:
         print(f"Telegram'a mesaj gönderilirken hata oluştu: {e}", file=sys.stderr)
 
-# ---
-# Burası önemli: `yeni_kurslari_kontrol_et` artık `async` bir fonksiyon
-# ---
 async def yeni_kurslari_kontrol_et():
-    """Yeni kurs olup olmadığını kontrol eder ve sonuçları Telegram'a bildirir."""
+    """Yeni kurs olup olmadığını kontrol eder ve yalnızca yeni kurs varsa Telegram'a bildirir."""
     kurslar = kurslari_getir()
 
     if not kurslar:
-        mesaj = "Kurs bilgileri alınamadı. Lütfen daha sonra tekrar deneyin."
-        print(mesaj)
-        # Hata burada düzeltildi: `await` eklendi
-        await telegram_mesaj_gonder(mesaj)
+        print("Kurs bilgileri alınamadı.")
         return
 
     yeni = [k for k in kurslar if k["bas_tarih"] > REFERANS_TARIH]
@@ -92,25 +85,30 @@ async def yeni_kurslari_kontrol_et():
         mesaj = "🚨 Yeni kurslar bulundu:\n\n"
         for k in yeni:
             mesaj += f"- {k['baslik']} / {k['yer']} / {k['tarih']}\n"
-        print(mesaj)
-        # Hata burada düzeltildi: `await` eklendi
         await telegram_mesaj_gonder(mesaj)
     else:
-        mesaj = "Yeni kurs bulunamadı."
-        print(mesaj)
-        # Hata burada düzeltildi: `await` eklendi
-        await telegram_mesaj_gonder(mesaj)
+        print("Yeni kurs bulunamadı.")
+
+
+def bekle_saat_basi():
+    """Bir sonraki saat başına kadar bekler."""
+    import datetime
+    now = datetime.datetime.now()
+    next_hour = (now.replace(minute=0, second=0, microsecond=0)
+                 + datetime.timedelta(hours=1))
+    sleep_seconds = (next_hour - now).total_seconds()
+    print(f"{sleep_seconds:.0f} saniye bekleniyor, sonraki tarama saat başı yapılacak.")
+    time.sleep(sleep_seconds)
+
 
 # -------------------------
-# `asyncio.run` ile ana döngüyü çalıştırma
+# Saat başı loop
 # -------------------------
 if __name__ == "__main__":
     while True:
         try:
-            # `async` fonksiyonu, `asyncio.run` ile çağırıyoruz.
             asyncio.run(yeni_kurslari_kontrol_et())
         except Exception as e:
-            print(f"Genel bir hata oluştu: {e}", file=sys.stderr)
-        
-        # 30 dakika bekle (1800 saniye)
-        time.sleep(1800)
+            print(f"Hata oluştu: {e}", file=sys.stderr)
+        # Bir sonraki saat başını bekle
+        bekle_saat_basi()
