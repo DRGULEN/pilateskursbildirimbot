@@ -30,8 +30,10 @@ def kurslari_getir():
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
         resp.raise_for_status()
-        # --- DEBUG: Sayfanın ilk 500 karakterini logla ---
+
+        # --- DEBUG: HTML’in ilk 500 karakterini logla ---
         print("DEBUG HTML:", resp.text[:500])
+
     except requests.exceptions.RequestException as e:
         print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
         return []
@@ -69,7 +71,7 @@ async def telegram_mesaj_gonder(mesaj):
     try:
         bot = Bot(token=BOT_TOKEN)
         await bot.send_message(chat_id=CHAT_ID, text=mesaj)
-        print("Telegram'a mesaj gönderildi.")
+        print("Telegram'a bildirim gönderildi.")
     except Exception as e:
         print(f"Telegram'a mesaj gönderilirken hata oluştu: {e}", file=sys.stderr)
 
