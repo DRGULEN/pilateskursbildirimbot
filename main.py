@@ -29,8 +29,7 @@ def kurslari_getir():
     try:
         resp = requests.get(URL, headers=headers, timeout=10)
         resp.raise_for_status()
-        # --- DEBUG: Sayfanın ilk 1000 karakterini loga yaz ---
-        print("DEBUG HTML:", resp.text[:1000])
+        print("DEBUG: Web sayfası başarıyla çekildi.")
     except requests.exceptions.RequestException as e:
         print(f"Hata: Web sayfasına bağlanılamadı. {e}", file=sys.stderr)
         return []
@@ -73,6 +72,9 @@ async def telegram_mesaj_gonder(mesaj):
     except Exception as e:
         print(f"Telegram'a mesaj gönderilirken hata oluştu: {e}", file=sys.stderr)
 
+# ---
+# Burası önemli: `yeni_kurslari_kontrol_et` artık `async` bir fonksiyon
+# ---
 async def yeni_kurslari_kontrol_et():
     """Yeni kurs olup olmadığını kontrol eder ve sonuçları Telegram'a bildirir."""
     kurslar = kurslari_getir()
@@ -80,6 +82,7 @@ async def yeni_kurslari_kontrol_et():
     if not kurslar:
         mesaj = "Kurs bilgileri alınamadı. Lütfen daha sonra tekrar deneyin."
         print(mesaj)
+        # Hata burada düzeltildi: `await` eklendi
         await telegram_mesaj_gonder(mesaj)
         return
 
@@ -90,20 +93,24 @@ async def yeni_kurslari_kontrol_et():
         for k in yeni:
             mesaj += f"- {k['baslik']} / {k['yer']} / {k['tarih']}\n"
         print(mesaj)
+        # Hata burada düzeltildi: `await` eklendi
         await telegram_mesaj_gonder(mesaj)
     else:
         mesaj = "Yeni kurs bulunamadı."
         print(mesaj)
+        # Hata burada düzeltildi: `await` eklendi
         await telegram_mesaj_gonder(mesaj)
 
 # -------------------------
-# Loop ile sürekli çalıştırma
+# `asyncio.run` ile ana döngüyü çalıştırma
 # -------------------------
 if __name__ == "__main__":
     while True:
         try:
+            # `async` fonksiyonu, `asyncio.run` ile çağırıyoruz.
             asyncio.run(yeni_kurslari_kontrol_et())
         except Exception as e:
-            print(f"Hata oluştu: {e}", file=sys.stderr)
+            print(f"Genel bir hata oluştu: {e}", file=sys.stderr)
+        
         # 30 dakika bekle (1800 saniye)
         time.sleep(1800)
