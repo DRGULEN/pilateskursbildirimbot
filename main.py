@@ -20,17 +20,23 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 REFERANS_TARIH = datetime.strptime("08.09.2025", "%d.%m.%Y")
 URL = "https://www.tcf.gov.tr/branslar/pilates/"
 
+# --------------------------
+# Telegram mesaj gönderme
+# --------------------------
 async def telegram_mesaj_gonder(mesaj):
     bot = Bot(token=BOT_TOKEN)
     await bot.send_message(chat_id=CHAT_ID, text=mesaj)
     print("Telegram'a bildirim gönderildi.")
 
+# --------------------------
+# Kursları çekme
+# --------------------------
 def kurslari_getir():
     options = Options()
     options.headless = True
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    
+
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(URL)
 
@@ -67,11 +73,19 @@ def kurslari_getir():
                 bas_tarih = datetime.strptime(tarih.split(" - ")[0], "%d.%m.%Y")
             except:
                 continue
-            kurslar.append({"baslik": baslik, "yer": yer, "tarih": tarih, "bas_tarih": bas_tarih})
+            kurslar.append({
+                "baslik": baslik,
+                "yer": yer,
+                "tarih": tarih,
+                "bas_tarih": bas_tarih
+            })
 
     driver.quit()
     return kurslar
 
+# --------------------------
+# Yeni kursları kontrol et
+# --------------------------
 async def yeni_kurslari_kontrol_et():
     kurslar = kurslari_getir()
     if not kurslar:
@@ -87,6 +101,9 @@ async def yeni_kurslari_kontrol_et():
     else:
         print("Yeni kurs bulunamadı.")
 
+# --------------------------
+# Saat başı loop
+# --------------------------
 def bekle_saat_basi():
     import datetime
     now = datetime.datetime.now()
@@ -96,9 +113,9 @@ def bekle_saat_basi():
     print(f"{sleep_seconds:.0f} saniye bekleniyor, sonraki tarama saat başı yapılacak.")
     time.sleep(sleep_seconds)
 
-# -------------------------
-# Saat başı loop
-# -------------------------
+# --------------------------
+# Main loop
+# --------------------------
 if __name__ == "__main__":
     while True:
         try:
